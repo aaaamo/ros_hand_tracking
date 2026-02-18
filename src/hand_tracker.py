@@ -1,34 +1,32 @@
 #!/usr/bin/env python3
-"""MediaPipe HandLandmarker wrapper for ROS hand tracking."""
+"""MediaPipe Hand Tracking & Gesture Recognition wrapper."""
 
-import copy
 import json
 import cv2 as cv
 import numpy as np
 import mediapipe as mp
 
 BaseOptions = mp.tasks.BaseOptions
+VisionRunningMode = mp.tasks.vision.RunningMode
+
+# HandLandmarker (tracking only)
 HandLandmarker = mp.tasks.vision.HandLandmarker
 HandLandmarkerOptions = mp.tasks.vision.HandLandmarkerOptions
-VisionRunningMode = mp.tasks.vision.RunningMode
+
+# GestureRecognizer (tracking + gesture)
+GestureRecognizer = mp.tasks.vision.GestureRecognizer
+GestureRecognizerOptions = mp.tasks.vision.GestureRecognizerOptions
 
 
 class HandTracker:
-    """Wraps MediaPipe HandLandmarker (Tasks API) for per-frame hand tracking."""
+    """Wraps MediaPipe HandLandmarker or GestureRecognizer for per-frame hand tracking."""
 
-    # Connections between landmarks for drawing skeleton
     HAND_CONNECTIONS = [
-        # Thumb
         (0, 1), (1, 2), (2, 3), (3, 4),
-        # Index finger
         (0, 5), (5, 6), (6, 7), (7, 8),
-        # Middle finger
         (0, 9), (9, 10), (10, 11), (11, 12),
-        # Ring finger
         (0, 13), (13, 14), (14, 15), (15, 16),
-        # Pinky
         (0, 17), (17, 18), (18, 19), (19, 20),
-        # Palm
         (5, 9), (9, 13), (13, 17),
     ]
 
@@ -36,35 +34,52 @@ class HandTracker:
 
     def __init__(self, model_path, num_hands=1,
                  min_detection_confidence=0.7,
-                 min_tracking_confidence=0.5):
-        options = HandLandmarkerOptions(
-            base_options=BaseOptions(model_asset_path=model_path),
-            running_mode=VisionRunningMode.VIDEO,
-            num_hands=num_hands,
-            min_hand_detection_confidence=min_detection_confidence,
-            min_hand_presence_confidence=0.5,
-            min_tracking_confidence=min_tracking_confidence,
-        )
-        self.landmarker = HandLandmarker.create_from_options(options)
+                 min_tracking_confidence=0.5,
+                 enable_gesture=False):
+        self.enable_gesture = enable_gesture
+
+        if enable_gesture:
+            options = GestureRecognizerOptions(
+                base_options=BaseOptions(model_asset_path=model_path),
+                running_mode=VisionRunningMode.VIDEO,
+                num_hands=num_hands,
+                min_hand_detection_confidence=min_detection_confidence,
+                min_hand_presence_confidence=0.5,
+                min_tracking_confidence=min_tracking_confidence,
+            )
+            self._recognizer = GestureRecognizer.create_from_options(options)
+        else:
+            options = HandLandmarkerOptions(
+                base_options=BaseOptions(model_asset_path=model_path),
+                running_mode=VisionRunningMode.VIDEO,
+                num_hands=num_hands,
+                min_hand_detection_confidence=min_detection_confidence,
+                min_hand_presence_confidence=0.5,
+                min_tracking_confidence=min_tracking_confidence,
+            )
+            self._recognizer = HandLandmarker.create_from_options(options)
+
         self._timestamp_ms = 0
 
     def detect(self, bgr_image):
-        """Run hand landmark detection on a BGR image.
-
-        Args:
-            bgr_image: OpenCV BGR image (numpy array).
+        """Run hand detection on a BGR image.
 
         Returns:
             List of dicts, each containing:
                 - 'handedness': 'Left' or 'Right'
                 - 'landmarks': list of 21 dicts with 'x', 'y', 'z' (normalized)
                 - 'pixel_landmarks': list of 21 [px, py] in image coordinates
+                - 'gesture': gesture name string (only when enable_gesture=True)
         """
         rgb_image = cv.cvtColor(bgr_image, cv.COLOR_BGR2RGB)
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_image)
 
         self._timestamp_ms += 33  # ~30fps increment
-        result = self.landmarker.detect_for_video(mp_image, self._timestamp_ms)
+
+        if self.enable_gesture:
+            result = self._recognizer.recognize_for_video(mp_image, self._timestamp_ms)
+        else:
+            result = self._recognizer.detect_for_video(mp_image, self._timestamp_ms)
 
         hands = []
         if not result.hand_landmarks:
@@ -82,24 +97,23 @@ class HandTracker:
                 py = min(int(lm.y * h), h - 1)
                 pixel_landmarks.append([px, py])
 
-            hands.append({
+            hand_data = {
                 'handedness': handedness,
                 'landmarks': norm_landmarks,
                 'pixel_landmarks': pixel_landmarks,
-            })
+            }
+
+            if self.enable_gesture and result.gestures:
+                gesture = result.gestures[i][0]
+                hand_data['gesture'] = gesture.category_name
+                hand_data['gesture_score'] = round(gesture.score, 3)
+
+            hands.append(hand_data)
 
         return hands
 
     def draw(self, image, hands):
-        """Draw hand landmarks and skeleton on image.
-
-        Args:
-            image: BGR image to draw on (modified in-place).
-            hands: Output from detect().
-
-        Returns:
-            The annotated image.
-        """
+        """Draw hand landmarks, skeleton, and gesture label on image."""
         for hand in hands:
             pts = hand['pixel_landmarks']
 
@@ -114,13 +128,19 @@ class HandTracker:
                 cv.circle(image, (pt[0], pt[1]), r, (255, 255, 255), -1)
                 cv.circle(image, (pt[0], pt[1]), r, (0, 0, 0), 1)
 
-            # Draw bounding rect + handedness label
+            # Draw bounding rect + label
             brect = self._calc_bounding_rect(pts)
             cv.rectangle(image, (brect[0], brect[1]), (brect[2], brect[3]),
                          (0, 0, 0), 1)
+
+            # Label: handedness + gesture
+            label = hand['handedness']
+            if 'gesture' in hand and hand['gesture'] != 'None':
+                label += ': ' + hand['gesture']
+
             cv.rectangle(image, (brect[0], brect[1]),
                          (brect[2], brect[1] - 22), (0, 0, 0), -1)
-            cv.putText(image, hand['handedness'],
+            cv.putText(image, label,
                        (brect[0] + 5, brect[1] - 4),
                        cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1,
                        cv.LINE_AA)
@@ -128,7 +148,7 @@ class HandTracker:
         return image
 
     def close(self):
-        self.landmarker.close()
+        self._recognizer.close()
 
     @staticmethod
     def hands_to_json(hands):

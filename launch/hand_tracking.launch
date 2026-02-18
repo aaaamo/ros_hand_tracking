@@ -1,19 +1,23 @@
 <launch>
-    <arg name="model_path" default="$(find ros_hand_tracking)/model/hand_landmarker.task"/>
+    <arg name="model_path" default=""/>
     <arg name="subscribe_image_topic" default="/image_raw"/>
     <arg name="publish_landmarks_topic" default="/hand_tracking/landmarks"/>
+    <arg name="publish_gesture_topic" default="/hand_tracking/gesture"/>
     <arg name="num_hands" default="1"/>
     <arg name="min_detection_confidence" default="0.7"/>
     <arg name="min_tracking_confidence" default="0.5"/>
     <arg name="show_image" default="True"/>
+    <arg name="enable_gesture" default="False"/>
 
     <node name="hand_tracking" pkg="ros_hand_tracking" type="hand_tracking.py" output="screen">
         <param name="model_path" type="string" value="$(arg model_path)"/>
         <param name="subscribe_image_topic" type="string" value="$(arg subscribe_image_topic)"/>
         <param name="publish_landmarks_topic" type="string" value="$(arg publish_landmarks_topic)"/>
+        <param name="publish_gesture_topic" type="string" value="$(arg publish_gesture_topic)"/>
         <param name="num_hands" type="int" value="$(arg num_hands)"/>
         <param name="min_detection_confidence" type="double" value="$(arg min_detection_confidence)"/>
         <param name="min_tracking_confidence" type="double" value="$(arg min_tracking_confidence)"/>
         <param name="show_image" type="bool" value="$(arg show_image)"/>
+        <param name="enable_gesture" type="bool" value="$(arg enable_gesture)"/>
     </node>
 </launch>
