@@ -22,20 +22,41 @@ class HandTracker:
     """Wraps MediaPipe HandLandmarker or GestureRecognizer for per-frame hand tracking."""
 
     HAND_CONNECTIONS = [
-        (0, 1), (1, 2), (2, 3), (3, 4),
-        (0, 5), (5, 6), (6, 7), (7, 8),
-        (0, 9), (9, 10), (10, 11), (11, 12),
-        (0, 13), (13, 14), (14, 15), (15, 16),
-        (0, 17), (17, 18), (18, 19), (19, 20),
-        (5, 9), (9, 13), (13, 17),
+        (0, 1),
+        (1, 2),
+        (2, 3),
+        (3, 4),
+        (0, 5),
+        (5, 6),
+        (6, 7),
+        (7, 8),
+        (0, 9),
+        (9, 10),
+        (10, 11),
+        (11, 12),
+        (0, 13),
+        (13, 14),
+        (14, 15),
+        (15, 16),
+        (0, 17),
+        (17, 18),
+        (18, 19),
+        (19, 20),
+        (5, 9),
+        (9, 13),
+        (13, 17),
     ]
 
     FINGERTIP_INDICES = {4, 8, 12, 16, 20}
 
-    def __init__(self, model_path, num_hands=1,
-                 min_detection_confidence=0.7,
-                 min_tracking_confidence=0.5,
-                 enable_gesture=False):
+    def __init__(
+        self,
+        model_path,
+        num_hands=1,
+        min_detection_confidence=0.7,
+        min_tracking_confidence=0.5,
+        enable_gesture=False,
+    ):
         self.enable_gesture = enable_gesture
 
         if enable_gesture:
@@ -92,21 +113,21 @@ class HandTracker:
             norm_landmarks = []
             pixel_landmarks = []
             for lm in landmarks:
-                norm_landmarks.append({'x': lm.x, 'y': lm.y, 'z': lm.z})
+                norm_landmarks.append({"x": lm.x, "y": lm.y, "z": lm.z})
                 px = min(int(lm.x * w), w - 1)
                 py = min(int(lm.y * h), h - 1)
                 pixel_landmarks.append([px, py])
 
             hand_data = {
-                'handedness': handedness,
-                'landmarks': norm_landmarks,
-                'pixel_landmarks': pixel_landmarks,
+                "handedness": handedness,
+                "landmarks": norm_landmarks,
+                "pixel_landmarks": pixel_landmarks,
             }
 
             if self.enable_gesture and result.gestures:
                 gesture = result.gestures[i][0]
-                hand_data['gesture'] = gesture.category_name
-                hand_data['gesture_score'] = round(gesture.score, 3)
+                hand_data["gesture"] = gesture.category_name
+                hand_data["gesture_score"] = round(gesture.score, 3)
 
             hands.append(hand_data)
 
@@ -115,7 +136,7 @@ class HandTracker:
     def draw(self, image, hands):
         """Draw hand landmarks, skeleton, and gesture label on image."""
         for hand in hands:
-            pts = hand['pixel_landmarks']
+            pts = hand["pixel_landmarks"]
 
             # Draw skeleton connections
             for a, b in self.HAND_CONNECTIONS:
@@ -130,20 +151,28 @@ class HandTracker:
 
             # Draw bounding rect + label
             brect = self._calc_bounding_rect(pts)
-            cv.rectangle(image, (brect[0], brect[1]), (brect[2], brect[3]),
-                         (0, 0, 0), 1)
+            cv.rectangle(
+                image, (brect[0], brect[1]), (brect[2], brect[3]), (0, 0, 0), 1
+            )
 
             # Label: handedness + gesture
-            label = hand['handedness']
-            if 'gesture' in hand and hand['gesture'] != 'None':
-                label += ': ' + hand['gesture']
+            label = hand["handedness"]
+            if "gesture" in hand and hand["gesture"] != "None":
+                label += ": " + hand["gesture"]
 
-            cv.rectangle(image, (brect[0], brect[1]),
-                         (brect[2], brect[1] - 22), (0, 0, 0), -1)
-            cv.putText(image, label,
-                       (brect[0] + 5, brect[1] - 4),
-                       cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1,
-                       cv.LINE_AA)
+            cv.rectangle(
+                image, (brect[0], brect[1]), (brect[2], brect[1] - 22), (0, 0, 0), -1
+            )
+            cv.putText(
+                image,
+                label,
+                (brect[0] + 5, brect[1] - 4),
+                cv.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                (255, 255, 255),
+                1,
+                cv.LINE_AA,
+            )
 
         return image
 
