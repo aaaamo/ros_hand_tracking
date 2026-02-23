@@ -23,7 +23,7 @@ class HandTrackingNode:
         rospy.init_node('hand_tracking', anonymous=True)
 
         # Parameters
-        image_topic = rospy.get_param('~subscribe_image_topic', '/image_raw')
+        image_topic = rospy.get_param('~subscribe_image_topic', '/camera/color/image_raw')
         landmarks_topic = rospy.get_param('~publish_landmarks_topic',
                                           '/hand_tracking/landmarks')
         gesture_topic = rospy.get_param('~publish_gesture_topic',
