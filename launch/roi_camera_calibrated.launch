@@ -1,0 +1,13 @@
+<launch>
+  <!-- The rpy in the comment uses the extrinsic XYZ convention, which is the same as is used in a URDF. See
+       http://wiki.ros.org/geometry2/RotationMethods and https://en.wikipedia.org/wiki/Euler_angles for more info. -->
+  <!-- xyz="0.652953 -0.163138 0.924387" rpy="0.0207891 -2.92143 -1.6083" -->
+  <node pkg="tf2_ros" type="static_transform_publisher" name="roi_camera_tf"
+      args="0.6533250633236402 -0.17592820606226614 0.924037781900709  -0.005225201517898478 0.7801765266379356 0.02274680660784975 0.6251238815958072 base_link roi_link" />
+  <include file="$(find realsense2_camera)/launch/rs_camera.launch">
+      <arg name="camera" value="roi"/>
+      <arg name="enable_sync" value="true"/>
+      <arg name="align_depth" value="true"/>   
+      <arg name="filters" value="pointcloud"/>
+  </include>
+</launch>

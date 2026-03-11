@@ -3,7 +3,7 @@
 
 import rospy
 import tf2_ros
-import tf2_geometry_msgs.tf2_geometry_msgs
+from tf2_geometry_msgs import tf2_geometry_msgs
 from geometry_msgs.msg import PointStamped
 from cv_bridge import CvBridgeError
 

@@ -8,13 +8,13 @@
     <arg name="show_image"               default="False"/>
 
     <!-- ── Topics ───────────────────────────────────────────────────── -->
-    <arg name="subscribe_image_topic"      default="/camera/color/image_raw"/>
+    <arg name="subscribe_image_topic"      default="/roi/color/image_raw"/>
     <arg name="publish_landmarks_topic"    default="/hand_tracking/landmarks"/>
     <arg name="publish_gesture_topic"      default="/hand_tracking/gesture"/>
     <arg name="publish_landmarks_3d_topic" default="/hand_tracking/landmarks_3d"/>
     <arg name="publish_draw_path_topic"    default="/hand_tracking/draw_path"/>
-    <arg name="camera_info_topic"          default="/camera/color/camera_info"/>
-    <arg name="depth_topic"                default="/camera/depth/image_rect_raw"/>
+    <arg name="camera_info_topic"          default="/roi/color/camera_info"/>
+    <arg name="depth_topic"                default="/roi/depth/image_rect_raw"/>
 
     <!-- ── 3D projection ────────────────────────────────────────────── -->
     <arg name="use_depth"   default="False"/>
