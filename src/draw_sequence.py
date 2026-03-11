@@ -49,12 +49,13 @@ class DrawSequence:
         pose_array = PoseArray()
         pose_array.header.stamp = rospy.Time.now()
         pose_array.header.frame_id = "base_link"
-        pose = Pose()
         for p in self._path:
             if p is None or len(p) != 3:
                 continue
+            pose = Pose()
             pose.position = Point(x=p[0], y=p[1], z=p[2])
             pose_array.poses.append(pose)
+        return pose_array
 
     def update(self, gesture, point_3d, landmarks):
         """Call once per frame with the first hand's data.

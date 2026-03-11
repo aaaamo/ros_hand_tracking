@@ -6,12 +6,10 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-import json
-
 import rospy
 import cv2 as cv
 from cv_bridge import CvBridge, CvBridgeError
-from geometry_msgs.msg import PoseArray, TransformStamped
+from geometry_msgs.msg import Pose, Point, PoseArray
 from sensor_msgs.msg import CameraInfo, Image
 from std_msgs.msg import String
 
@@ -53,7 +51,6 @@ class HandTrackingNode:
         self.gesture_pub   = rospy.Publisher(gesture_topic,   String, queue_size=10) if enable_gesture else None
 
         # --- 3D projection ---
-        transform_topic     = rospy.get_param("~transform_topic",           "/hand_tracking/camera_transform")
         landmarks_3d_topic  = rospy.get_param("~publish_landmarks_3d_topic","/hand_tracking/landmarks_3d")
         camera_info_topic   = rospy.get_param("~camera_info_topic",         "/camera/color/camera_info")
         depth_topic         = rospy.get_param("~depth_topic",               "/camera/depth/image_rect_raw")
@@ -67,7 +64,7 @@ class HandTrackingNode:
             cx=rospy.get_param("~camera_cx", 320.0),
             cy=rospy.get_param("~camera_cy", 240.0),
         )
-        self.landmarks_3d_pub = rospy.Publisher(landmarks_3d_topic, String, queue_size=10)
+        self.landmarks_3d_pub = rospy.Publisher(landmarks_3d_topic, PoseArray, queue_size=10)
 
         # --- Draw sequence ---
         draw_path_topic = rospy.get_param("~publish_draw_path_topic", "/hand_tracking/draw_path")
@@ -75,14 +72,13 @@ class HandTrackingNode:
         self.draw_seq = DrawSequence(publish_fn=self.draw_path_pub.publish)
 
         # --- Subscribers ---
-        rospy.Subscriber(image_topic,       Image,            self.callback)
-        rospy.Subscriber(transform_topic,   TransformStamped, self.proj.on_transform)
-        rospy.Subscriber(camera_info_topic, CameraInfo,       self._camera_info_cb)
+        rospy.Subscriber(image_topic,       Image,      self.callback)
+        rospy.Subscriber(camera_info_topic, CameraInfo, self._camera_info_cb)
         if self.proj.use_depth:
             rospy.Subscriber(depth_topic, Image, self.proj.on_depth)
 
-        rospy.loginfo("HandTrackingNode ready. image=%s  transform=%s  use_depth=%s",
-                      image_topic, transform_topic, self.proj.use_depth)
+        rospy.loginfo("HandTrackingNode ready. image=%s  use_depth=%s",
+                      image_topic, self.proj.use_depth)
 
     def _camera_info_cb(self, msg):
         self.proj.on_camera_info(msg)
@@ -105,20 +101,28 @@ class HandTrackingNode:
                 self.gesture_pub.publish(hands[0]["gesture"])
 
             if self.proj.ready:
-                hands_3d = []
                 for hand in hands:
                     lm3d = [self.proj.pixel_to_3d(px, py) for px, py in hand["pixel_landmarks"]]
-                    entry = {"handedness": hand["handedness"], "landmarks_3d": lm3d}
-                    if "gesture" in hand:
-                        entry["gesture"] = hand["gesture"]
-                    hands_3d.append(entry)
-                self.landmarks_3d_pub.publish(json.dumps(hands_3d))
+                    hand["landmarks_3d"] = lm3d
 
-                first = hands_3d[0]
+                    # Publish 21 landmarks as PoseArray
+                    pose_array = PoseArray()
+                    pose_array.header.stamp = rospy.Time.now()
+                    pose_array.header.frame_id = "base_link" if self.proj.has_transform else self.proj.camera_frame
+                    for pt in lm3d:
+                        if pt is None:
+                            continue
+                        pose = Pose()
+                        pose.position = Point(x=pt[0], y=pt[1], z=pt[2])
+                        pose_array.poses.append(pose)
+                    self.landmarks_3d_pub.publish(pose_array)
+
+                first = hands[0]
+                draw_pt = first.get("landmarks_3d", [None] * 21)[DRAW_LANDMARK_IDX]
                 self.draw_seq.update(
                     gesture=first.get("gesture"),
-                    point_3d=first["landmarks_3d"][DRAW_LANDMARK_IDX],
-                    landmarks=hands[0]["landmarks"],
+                    point_3d=draw_pt,
+                    landmarks=first["landmarks"],
                 )
 
         if self.show_image:
