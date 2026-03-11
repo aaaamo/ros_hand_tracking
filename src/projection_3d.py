@@ -4,6 +4,9 @@
 import numpy as np
 import rospy
 import tf.transformations
+import tf2_geometry_msgs
+import tf2_ros
+from geometry_msgs.msg import Point
 from cv_bridge import CvBridgeError
 
 
@@ -23,8 +26,9 @@ class Projection3D:
         self.fy = fy
         self.cx = cx
         self.cy = cy
-        self.latest_transform = None   # geometry_msgs/TransformStamped
+        self.latest_transform = tf.transformations.identity_matrix()   # geometry_msgs/TransformStamped
         self.latest_depth = None       # numpy array (mm, uint16)
+
 
     # --- ROS callbacks ---
 
@@ -52,6 +56,19 @@ class Projection3D:
     @property
     def ready(self):
         return self.latest_transform is not None
+    
+    def transform(self, msg):
+        if not self.ready:
+            return None
+        
+        tf_buffer = tf2_ros.Buffer()
+        transform = tf_buffer.lookup_transform('base_link', 
+                                                msg.header.frame_id, 
+                                                rospy.Time(0),
+                                                rospy.Duration(1.0))
+        tf2_geometry_msgs.do_transform_point(
+            msg, transform
+        )
 
     def pixel_to_3d(self, px, py):
         """Back-project pixel (px, py) to [x, y, z] in world frame.
@@ -79,12 +96,12 @@ class Projection3D:
         z_cam = depth
 
         # Apply camera→world transform
-        t = self.latest_transform.transform
-        q = [t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w]
-        mat = tf.transformations.quaternion_matrix(q)
-        mat[0, 3] = t.translation.x
-        mat[1, 3] = t.translation.y
-        mat[2, 3] = t.translation.z
+        # t = self.latest_transform.transform
+        # q = [t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w]
+        # mat = tf.transformations.quaternion_matrix(q)
+        # mat[0, 3] = t.translation.x
+        # mat[1, 3] = t.translation.y
+        # mat[2, 3] = t.translation.z
 
-        p_world = mat @ np.array([x_cam, y_cam, z_cam, 1.0])
+        p_world = tf.transformations.identity_matrix() @ np.array([x_cam, y_cam, z_cam, 1.0])
         return [round(float(v), 4) for v in p_world[:3]]

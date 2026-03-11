@@ -123,7 +123,6 @@ class HandTracker:
                 "landmarks": norm_landmarks,
                 "pixel_landmarks": pixel_landmarks,
             }
-
             if self.enable_gesture and result.gestures:
                 gesture = result.gestures[i][0]
                 hand_data["gesture"] = gesture.category_name

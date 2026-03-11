@@ -2,6 +2,8 @@
 """Draw gesture sequence state machine (ROS node version)."""
 
 import json
+import rospy
+from geometry_msgs.msg import Point, Pose, PoseArray
 
 
 # ===========================================================
@@ -42,6 +44,17 @@ class DrawSequence:
     @property
     def path(self):
         return self._path
+    
+    def get_posearray(self) -> PoseArray:
+        pose_array = PoseArray()
+        pose_array.header.stamp = rospy.Time.now()
+        pose_array.header.frame_id = "base_link"
+        pose = Pose()
+        for p in self._path:
+            if p is None or len(p) != 3:
+                continue
+            pose.position = Point(x=p[0], y=p[1], z=p[2])
+            pose_array.poses.append(pose)
 
     def update(self, gesture, point_3d, landmarks):
         """Call once per frame with the first hand's data.
@@ -58,7 +71,10 @@ class DrawSequence:
         else:
             # End gesture is checked first so Closed_Fist always wins over pinch
             if gesture == DRAW_END_GESTURE:
-                self._publish(json.dumps(self._path))
+                # self._publish(json.dumps(self._path))
+                pose_array = self.get_posearray()
+                if pose_array.poses:
+                    self._publish(pose_array)
                 self.running = False
                 self._path = []
             elif is_pinch(landmarks):

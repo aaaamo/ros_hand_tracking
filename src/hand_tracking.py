@@ -11,7 +11,7 @@ import json
 import rospy
 import cv2 as cv
 from cv_bridge import CvBridge, CvBridgeError
-from geometry_msgs.msg import TransformStamped
+from geometry_msgs.msg import PoseArray, TransformStamped
 from sensor_msgs.msg import CameraInfo, Image
 from std_msgs.msg import String
 
@@ -71,7 +71,7 @@ class HandTrackingNode:
 
         # --- Draw sequence ---
         draw_path_topic = rospy.get_param("~publish_draw_path_topic", "/hand_tracking/draw_path")
-        self.draw_path_pub = rospy.Publisher(draw_path_topic, String, queue_size=10)
+        self.draw_path_pub = rospy.Publisher(draw_path_topic, PoseArray, queue_size=10)
         self.draw_seq = DrawSequence(publish_fn=self.draw_path_pub.publish)
 
         # --- Subscribers ---
