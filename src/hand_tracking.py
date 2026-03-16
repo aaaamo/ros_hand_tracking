@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import rospy
 import cv2 as cv
 from cv_bridge import CvBridge, CvBridgeError
-from geometry_msgs.msg import Pose, Point, PoseArray
+from geometry_msgs.msg import Pose, Point, PoseArray, PointStamped
 from sensor_msgs.msg import CameraInfo, Image
 from std_msgs.msg import String
 
@@ -68,8 +68,13 @@ class HandTrackingNode:
 
         # --- Draw sequence ---
         draw_path_topic = rospy.get_param("~publish_draw_path_topic", "/hand_tracking/draw_path")
+        draw_path_2d_topic = rospy.get_param("~publish_draw_path_2d_topic", "/hand_tracking/draw_path_2d")
         self.draw_path_pub = rospy.Publisher(draw_path_topic, PoseArray, queue_size=10)
-        self.draw_seq = DrawSequence(publish_fn=self.draw_path_pub.publish)
+        self.draw_path_2d_pub = rospy.Publisher(draw_path_2d_topic, PointStamped, queue_size=10)
+        self.draw_seq = DrawSequence(
+            publish_fn=self.draw_path_pub.publish,
+            publish_2d_fn=self.draw_path_2d_pub.publish,
+        )
 
         # --- Subscribers ---
         rospy.Subscriber(image_topic,       Image,      self.callback)
@@ -119,10 +124,13 @@ class HandTrackingNode:
 
                 first = hands[0]
                 draw_pt = first.get("landmarks_3d", [None] * 21)[DRAW_LANDMARK_IDX]
+                pixel_lms = first.get("pixel_landmarks")
+                draw_px = tuple(pixel_lms[DRAW_LANDMARK_IDX]) if pixel_lms else None
                 self.draw_seq.update(
                     gesture=first.get("gesture"),
                     point_3d=draw_pt,
                     landmarks=first["landmarks"],
+                    pixel_point=draw_px,
                 )
 
         if self.show_image:
