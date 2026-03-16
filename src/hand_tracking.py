@@ -52,8 +52,8 @@ class HandTrackingNode:
 
         # --- 3D projection ---
         landmarks_3d_topic  = rospy.get_param("~publish_landmarks_3d_topic","/hand_tracking/landmarks_3d")
-        camera_info_topic   = rospy.get_param("~camera_info_topic",         "/camera/color/camera_info")
-        depth_topic         = rospy.get_param("~depth_topic",               "/camera/depth/image_rect_raw")
+        camera_info_topic   = rospy.get_param("~camera_info_topic",         "/roi/aligned_depth_to_color/camera_info")
+        depth_topic         = rospy.get_param("~depth_topic",               "/roi/depth/image_rect_raw")
 
         self.proj = Projection3D(
             bridge=self.bridge,
