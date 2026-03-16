@@ -3,7 +3,7 @@
 
 import json
 import rospy
-from geometry_msgs.msg import Point, Pose, PoseArray, PointStamped
+from geometry_msgs.msg import Point, Pose, PoseArray
 
 
 # ===========================================================
@@ -36,10 +36,11 @@ class DrawSequence:
         """
         Args:
             publish_fn: callable(PoseArray) — called with the completed 3D path.
-            publish_2d_fn: callable(PointStamped) — called every frame during draw with the new 2D pixel point.
+            publish_2d_fn: callable(PoseArray) — called with the completed 2D pixel path.
         """
         self.running = False
         self._path = []
+        self._path_2d = []
         self._publish = publish_fn
         self._publish_2d = publish_2d_fn
 
@@ -59,17 +60,15 @@ class DrawSequence:
             pose_array.poses.append(pose)
         return pose_array
 
-    def _publish_2d_point(self, px, py):
-        """Publish a single 2D pixel point as PointStamped."""
-        if not self._publish_2d:
-            return
-        msg = PointStamped()
-        msg.header.stamp = rospy.Time.now()
-        msg.header.frame_id = "image"
-        msg.point.x = px
-        msg.point.y = py
-        msg.point.z = 0.0
-        self._publish_2d(msg)
+    def _get_posearray_2d(self):
+        pose_array = PoseArray()
+        pose_array.header.stamp = rospy.Time.now()
+        pose_array.header.frame_id = "image"
+        for px, py in self._path_2d:
+            pose = Pose()
+            pose.position = Point(x=px, y=py, z=0.0)
+            pose_array.poses.append(pose)
+        return pose_array
 
     def update(self, gesture, point_3d, landmarks, pixel_point=None):
         """Call once per frame with the first hand's data.
@@ -84,16 +83,22 @@ class DrawSequence:
             if gesture == DRAW_START_GESTURE:
                 self.running = True
                 self._path = []
+                self._path_2d = []
         else:
             # End gesture is checked first so Closed_Fist always wins over pinch
             if gesture == DRAW_END_GESTURE:
                 pose_array = self.get_posearray()
                 if pose_array.poses:
                     self._publish(pose_array)
+                if self._publish_2d:
+                    pose_array_2d = self._get_posearray_2d()
+                    if pose_array_2d.poses:
+                        self._publish_2d(pose_array_2d)
                 self.running = False
                 self._path = []
+                self._path_2d = []
             elif is_pinch(landmarks):
                 if point_3d is not None:
                     self._path.append(point_3d)
                 if pixel_point is not None:
-                    self._publish_2d_point(pixel_point[0], pixel_point[1])
+                    self._path_2d.append(pixel_point)

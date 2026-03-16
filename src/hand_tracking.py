@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import rospy
 import cv2 as cv
 from cv_bridge import CvBridge, CvBridgeError
-from geometry_msgs.msg import Pose, Point, PoseArray, PointStamped
+from geometry_msgs.msg import Pose, Point, PoseArray
 from sensor_msgs.msg import CameraInfo, Image
 from std_msgs.msg import String
 
@@ -70,7 +70,7 @@ class HandTrackingNode:
         draw_path_topic = rospy.get_param("~publish_draw_path_topic", "/hand_tracking/draw_path")
         draw_path_2d_topic = rospy.get_param("~publish_draw_path_2d_topic", "/hand_tracking/draw_path_2d")
         self.draw_path_pub = rospy.Publisher(draw_path_topic, PoseArray, queue_size=10)
-        self.draw_path_2d_pub = rospy.Publisher(draw_path_2d_topic, PointStamped, queue_size=10)
+        self.draw_path_2d_pub = rospy.Publisher(draw_path_2d_topic, PoseArray, queue_size=10)
         self.draw_seq = DrawSequence(
             publish_fn=self.draw_path_pub.publish,
             publish_2d_fn=self.draw_path_2d_pub.publish,
