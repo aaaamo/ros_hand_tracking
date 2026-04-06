@@ -4,8 +4,8 @@
     <arg name="num_hands"                default="1"/>
     <arg name="min_detection_confidence" default="0.7"/>
     <arg name="min_tracking_confidence"  default="0.5"/>
-    <arg name="enable_gesture"           default="False"/>
-    <arg name="show_image"               default="False"/>
+    <arg name="enable_gesture"           default="True"/>
+    <arg name="show_image"               default="True"/>
 
     <!-- ── Topics ───────────────────────────────────────────────────── -->
     <arg name="subscribe_image_topic"      default="/roi/color/image_raw"/>
@@ -53,4 +53,6 @@
         <param name="camera_cy"   type="double" value="$(arg camera_cy)"/>
 
     </node>
+    <include file="$(find ros_hand_tracking)/launch/roi_camera_calibrated.launch"/>
 </launch>
+

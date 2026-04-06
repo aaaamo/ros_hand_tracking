@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import rospy
 import cv2 as cv
+import numpy as np
 from cv_bridge import CvBridge, CvBridgeError
 from geometry_msgs.msg import Pose, Point, PoseArray
 from sensor_msgs.msg import CameraInfo, Image
@@ -113,7 +114,7 @@ class HandTrackingNode:
                     # Publish 21 landmarks as PoseArray
                     pose_array = PoseArray()
                     pose_array.header.stamp = rospy.Time.now()
-                    pose_array.header.frame_id = "base_link" if self.proj.has_transform else self.proj.camera_frame
+                    pose_array.header.frame_id = "roi_link" if self.proj.has_transform else self.proj.camera_frame
                     for pt in lm3d:
                         if pt is None:
                             continue
@@ -136,6 +137,10 @@ class HandTrackingNode:
         if self.show_image:
             debug_image = cv_image.copy()
             self.tracker.draw(debug_image, hands)
+            path_2d = self.draw_seq._path_2d
+            if len(path_2d) > 1:
+                pts = np.array(path_2d, dtype=np.int32).reshape((-1, 1, 2))
+                cv.polylines(debug_image, [pts], isClosed=False, color=(0, 0, 255), thickness=2)
             fps = self.fps_calc.get()
             cv.putText(debug_image, "FPS: {:.1f}".format(fps), (10, 30),
                        cv.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0), 4, cv.LINE_AA)

@@ -12,7 +12,7 @@ from geometry_msgs.msg import Point, Pose, PoseArray
 DRAW_START_GESTURE = "Victory"  # begin draw session (trained gesture)
 DRAW_END_GESTURE = "Thumb_Up"  # finish session and publish (trained gesture)
 DRAW_LANDMARK_IDX = 8  # landmark to trace (8 = index fingertip)
-PINCH_THRESHOLD = 0.08  # normalised distance threshold for pinch
+PINCH_THRESHOLD = 0.04  # normalised distance threshold for pinch
 #   active draw = thumb tip (4) and index tip (8) within PINCH_THRESHOLD
 # ===========================================================
 
